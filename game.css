@@ -1,0 +1,12 @@
+body{
+    text-align: center;
+    background-color: antiquewhite;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100dvh;
+    flex-direction: column;
+    position: fixed;
+    width: 100%;
+    margin: 0;
+}
