@@ -85,26 +85,22 @@ function Ball(pos, posChange, redius)
     this.redius = redius;
     this.gameUpdate = function()
     {
-        // if(!collision(player,this))
-        // {
-        //     console.log(this.pos.x);
-        //     console.log(canvas.width);
-        //     // return;
-        // }
-
-        this.pos.x += this.posChange.x;
-        this.pos.y == this.posChange.y;
         if(this.pos.x - this.redius < 0)
-        {
-            console.log(this.pos.x - redius);
+        { 
+            console.log(this.posChange.x);
             this.restart()
         }
         if(this.pos.x + this.redius > window.innerWidth)
+        {
+            console.log(this.posChange.x);
             this.restart()
+        }
         if(this.pos.y + this.redius > window.innerHeight)
             this.posChange.y *= -1;
         if(this.pos.y - this.redius < 0)
             this.posChange.y *= -1;
+        this.pos.x += this.posChange.x;
+        this.pos.y += this.posChange.y;
         this.top = this.pos.y - this.redius;
         this.bottom = this.pos.y + this.redius;
         this.left = this.pos.x - this.redius;
@@ -122,26 +118,30 @@ function Ball(pos, posChange, redius)
             else
             this.posChange.x = -this.speed * Math.cos(angleMove);
             this.posChange.y = this.speed * Math.sin(angleMove);
-            this.speed += 2;
+            if(this.left + this.posChange.x < window.innerWidth)
+            if(this.speed < 90)
+            {
+                this.speed += 0.5;
+            }
         }
-}
-this.gameDraw = function()
-{
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.redius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.closePath();
-};
-this.restart = function()
-{
-    this.posChange.x = (-(this.posChange.x / this.speed ) *10);
-    this.posChange.y = (this.posChange.y / this.speed) * posChange;
-    this.pos.x = player.x;
-    this.pos.y = player.y ;
-    // console.log(this.posChange.x);
-    this.speed = posChange;
-    player2.pos.y = canvas.height / 2 - player2.playerSize.y / 2;
-    player3.pos.y = canvas.height / 2 - player3.playerSize.y / 2;
+    }
+    this.gameDraw = function()
+    {
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.redius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.closePath();
+    };
+    this.restart = function()
+    {
+        this.pos.x = player.x;
+        this.pos.y = player.y ;
+        // console.log(this.posChange.x);
+        this.posChange.x = (-(this.posChange.x / this.speed ) * posChange);
+        this.posChange.y = (this.posChange.y / this.speed) * posChange;
+        this.speed = posChange;
+        player2.pos.y = canvas.height / 2 - player2.playerSize.y / 2;
+        player3.pos.y = canvas.height / 2 - player3.playerSize.y / 2;
     }
     
 }
@@ -181,5 +181,9 @@ function gameLoop() {
     gameDraw();
 }
 
-gameLoop();
+
+window.addEventListener('load', function()
+{
+    gameLoop();
+})
 // ctx.stroke();
