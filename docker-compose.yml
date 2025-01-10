@@ -1,0 +1,30 @@
+services:
+  game:
+    build: ./game
+    image: game
+    container_name: game
+    networks:
+      - transcendence
+    volumes:
+      - ./game:/usr/src/app
+    init: true
+
+  nginx:
+    build: 
+          context: .
+          dockerfile: ./nginx/Dockerfile
+    image: nginx
+    container_name: nginx
+    networks:
+      - transcendence
+    ports:
+      - "3000:80"
+    init: true
+    depends_on:
+      - game
+    volumes:
+      - ./game/front:/usr/share/nginx/html
+
+networks:
+  transcendence:
+    name: transcendence

@@ -85,19 +85,19 @@ function Ball(pos, posChange, redius)
     this.redius = redius;
     this.gameUpdate = function()
     {
-        if(this.pos.x - this.redius < 0)
+        if(this.pos.x - this.redius <= 0)
         { 
             console.log(this.posChange.x);
             this.restart()
         }
-        if(this.pos.x + this.redius > window.innerWidth)
+        if(this.pos.x + this.redius >= window.innerWidth)
         {
             console.log(this.posChange.x);
             this.restart()
         }
-        if(this.pos.y + this.redius > window.innerHeight)
+        if(this.pos.y + this.redius >= window.innerHeight)
             this.posChange.y *= -1;
-        if(this.pos.y - this.redius < 0)
+        if(this.pos.y - this.redius <= 0)
             this.posChange.y *= -1;
         this.pos.x += this.posChange.x;
         this.pos.y += this.posChange.y;
@@ -115,10 +115,11 @@ function Ball(pos, posChange, redius)
             let angleMove = hitPoint * Math.PI;
             if(this.pos.x < canvas.width / 2)
                 this.posChange.x = this.speed * Math.cos(angleMove);
-            else
-            this.posChange.x = -this.speed * Math.cos(angleMove);
+            else if(this.pos.x > canvas.width / 2)
+                this.posChange.x = -this.speed * Math.cos(angleMove);
+            console.log(player.playerSize.x - player.pos.x);
+            console.log(this.pos.x);
             this.posChange.y = this.speed * Math.sin(angleMove);
-            if(this.left + this.posChange.x < window.innerWidth)
             if(this.speed < 90)
             {
                 this.speed += 0.5;
@@ -140,8 +141,8 @@ function Ball(pos, posChange, redius)
         this.posChange.x = (-(this.posChange.x / this.speed ) * posChange);
         this.posChange.y = (this.posChange.y / this.speed) * posChange;
         this.speed = posChange;
-        player2.pos.y = canvas.height / 2 - player2.playerSize.y / 2;
-        player3.pos.y = canvas.height / 2 - player3.playerSize.y / 2;
+        // player2.pos.y = canvas.height / 2 - player2.playerSize.y / 2;
+        // player3.pos.y = canvas.height / 2 - player3.playerSize.y / 2;
     }
     
 }
