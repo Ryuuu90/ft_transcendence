@@ -1,234 +1,212 @@
-function vec2(x, y)
-{
-    return{x: x, y: y};
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+function vec2(x, y) {
+    return { x: x, y: y };
 }
 
+function vec3(x, y, z) {
+    return { x: x, y: y, z: z };
+}
 
 function collision(player, ball)
 {
-    return (player.top < ball.bottom + ball.posChange.y && player.bottom > ball.top + ball.posChange.y && player.right > ball.left + ball.posChange.x &&  player.left < ball.right + ball.posChange.x) 
-}
-class Paddle{
-    constructor(game, pos, posChange, paddleSize)
-    {
-        this.game = game;
-        this.pos = pos;
-        this.posChange = posChange;
-        this.paddleSize = paddleSize;
-        this.keys = {};
-        window.addEventListener('keydown', (event) => {this.keys[event.key] = true});
-        window.addEventListener('keyup', (event) => {this.keys[event.key] = false});
-    }
-    draw()
-    {
-        this.game.ctx.strokeStyle = 'red';
-        this.game.ctx.lineWidth = 4;
-        this.game.ctx.strokeRect(this.pos.x, this.pos.y, this.paddleSize.x, this.paddleSize.y);
-    }
-}
-
-class Ai extends Paddle{
-    constructor(game, pos, posChange, paddleSize)
-    {
-        super(game, pos, posChange, paddleSize)
-    }
-    update(ball)
-    {
-        var v;
-        if(this.game.width > this.game.height)
-        {
-            v = this.game.width / this.game.height
-            this.posChange = (Math.abs((this.pos.y + this.paddleSize.y / 2) - ball.pos.y) * v/ (Math.abs(this.pos.x - ball.pos.x) / ball.posChange.x)); 
-        }
-        else
-        {
-            v = this.game.height / this.game.width;
-            this.posChange =  (Math.abs((this.pos.y + this.paddleSize.y / 2) - ball.pos.y) * v/ (Math.abs(this.pos.x - ball.pos.x ) / ball.posChange.x)); 
-        }
-        const maxSpeed = 90;
-        this.posChange = Math.min(Math.abs(this.posChange), maxSpeed);
-        if(ball.pos.y < this.pos.y || ball.pos.y > this.pos.y + this.paddleSize.y)
-        {
-            console.log(this.posChange);
-            if(this.pos.y + this.paddleSize.y / 2 > ball.pos.y  && this.pos.y > ball.pos.y && this.pos  && this.pos.y - this.posChange > 0)
-                this.pos.y -= this.posChange;
-            else if(this.pos.y + this.paddleSize.y / 2 < ball.pos.y && this.pos.y + this.paddleSize.y < ball.pos.y && this.pos.y + this.paddleSize.y + this.posChange < this.game.canvas.height)
-                this.pos.y += this.posChange;
-        }
-        this.top = this.pos.y;
-        this.bottom = this.pos.y + this.paddleSize.y;
-        this.right = this.pos.x + this.paddleSize.x;
-        this.left = this.pos.x;
-    }
+    // console.log(player.top < ball.bottom + ball.posChange.x );
+    return ( player.top >= ball.bottom && // Player's top is above ball's bottom
+        player.bottom <= ball.top && // Player's bottom is below ball's top
+        player.right >= ball.left && // Player's right is beyond ball's left
+        player.left <= ball.right );
 }
 
 class Ball{
     constructor(game, pos, posChange, redius)
     {
-        this.game = game;
+        this.game = game
         this.pos = pos;
         this.speed2 = posChange;
         this.speed = posChange;
-        this.posChange = {x : this.speed , y:this.speed};
+        this.posChange = {x : this.speed, z: this.speed};
         this.redius = redius;
-    }
-    draw()
-    {
-        this.game.ctx.beginPath();
-        this.game.ctx.arc(this.pos.x, this.pos.y, this.redius, 0, Math.PI * 2);
-        this.game.ctx.stroke();
-        this.game.ctx.closePath();
+        this.ball = new THREE.Mesh(new THREE.SphereGeometry(this.redius), new THREE.MeshBasicMaterial({color: 0xae0f22}));
+        this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
     }
     restart()
     {
-        this.pos.x = this.game.width  / 2;
-        this.pos.y = this.game.height / 2;
-        // console.log(this.posChange.x);
-        this.posChange.x = (-(this.posChange.x / this.speed ) * this.speed2);
-        this.posChange.y = (this.posChange.y / this.speed) * this.speed2;
+        this.pos.z = 0;
+        this.pos.x = 0;
+        this.posChange.z = (-(this.posChange.z / this.speed ) * this.speed2);
+        this.posChange.x = (this.posChange.x / this.speed) * this.speed2;
         this.speed = this.speed2;
     }
     update()
     {
-        if(this.pos.x - this.redius <= 0)
-        { 
-            console.log(this.posChange.x);
-            this.restart()
-        }
-        if(this.pos.x + this.redius >= this.game.width)
-        {
-            console.log(this.posChange.x);
-            this.restart()
-        }
-        if(this.pos.y + this.redius >= this.game.height)
-            this.posChange.y *= -1;
-        if(this.pos.y - this.redius <= 0)
-            this.posChange.y *= -1;
+        if(this.pos.z - this.redius <= -5)
+            this.restart();
+        if(this.pos.z + this.redius >= 5)
+            this.restart();
+        if(this.pos.x + this.redius >= 2.5)
+            this.posChange.x *= -1;
+        if(this.pos.x - this.redius <= -2.5)
+            this.posChange.x *= -1;
+        this.pos.z += this.posChange.z;
         this.pos.x += this.posChange.x;
-        this.pos.y += this.posChange.y;
-        this.top = this.pos.y - this.redius;
-        this.bottom = this.pos.y + this.redius;
-        this.left = this.pos.x - this.redius;
-        this.right = this.pos.x + this.redius;
+        this.top = this.pos.x + this.redius;
+        this.bottom = this.pos.x - this.redius;
+        this.left = this.pos.z - this.redius;
+        this.right = this.pos.z + this.redius;
+        this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
     }
     collisionHandle(player)
     {
         if(collision(player, this))
         {
-            let hitPoint = (this.pos.y - (player.pos.y + player.paddleSize.y / 2));
-            hitPoint = hitPoint / player.paddleSize.y / 2;
-            let angleMove = hitPoint * Math.PI;
-            if(this.pos.x < canvas.width / 2)
-                this.posChange.x = this.speed * Math.cos(angleMove);
-            else if(this.pos.x > canvas.width / 2)
-                this.posChange.x = -this.speed * Math.cos(angleMove);
-            this.posChange.y = this.speed * Math.sin(angleMove);
+            let hitPoint = (this.pos.x - player.pos.x) / player.padSize;
+            let angleMove = hitPoint * Math.PI / 4;
+            if(this.pos.z < 0)
+                this.posChange.z = this.speed * Math.cos(angleMove);
+            else if(this.pos.z > 0)
+                this.posChange.z = -this.speed * Math.cos(angleMove);
+            this.posChange.x = this.speed * Math.sin(angleMove);
             if(this.speed < 90)
             {
-                this.speed += 15;
+                this.speed += 0.01;
             }
         }
     }
 }
 
-class player1 extends Paddle {
-    constructor(game, pos, posChange, paddleSize, keys)
-    {
-        super(game, pos, posChange, paddleSize,keys);
-    }
-    update()
-    {
-        if((this.keys['W'] || this.keys['w']) && this.pos.y - this.posChange > 0)
-        {
-            this.pos.y -= this.posChange;
-        }
-        if((this.keys['S'] || this.keys['s']) && this.pos.y + this.paddleSize.y + this.posChange < this.game.canvas.height)
-        {
-            this.pos.y += this.posChange;
-        }
-        this.top = this.pos.y;
-        this.bottom = this.pos.y + this.paddleSize.y;
-        this.right = this.pos.x + this.paddleSize.x;
-        this.left = this.pos.x;
-    }
-}
-
-class player2 extends Paddle {
-    constructor(game, pos, posChange, paddleSize, keys)
-    {
-        super(game, pos, posChange, paddleSize,keys);
-        console.log(this.keys);
-    }
-    update()
-    {
-        if((this.keys['ArrowUp']) && this.pos.y - this.posChange > 0)
-        {
-            this.pos.y -= this.posChange;
-        }
-        if((this.keys['ArrowDown']) && this.pos.y + this.paddleSize.y + this.posChange < this.game.height)
-        {
-            this.pos.y += this.posChange;
-        }
-        this.top = this.pos.y;
-        this.bottom = this.pos.y + this.paddleSize.y;
-        this.right = this.pos.x + this.paddleSize.x;
-        this.left = this.pos.x;
-    }
-}
-
-class Game{
-    constructor(canvas, context)
-    {
-        this.canvas = canvas;
-        this.ctx = context;
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-        this.paddle1 = new player1(this, vec2(5, this.height / 2 - 100), 40, vec2(50, 200));
-        this.paddle2 = new Ai(this, vec2(this.width - 50 - 5, this.height / 2 - 100), 20, vec2(50, 200));
-        this.ball = new Ball(this, vec2(this.width / 2, this.height / 2), 15, 20);
-        window.addEventListener('resize', (e) => {
-            this.resize(e.currentTarget.innerWidth, e.currentTarget.innerHeight);
-        });
+class Pad {
+    constructor(pos, posChange, paddleSize, color, keys) {
+        this.pos = pos;
+        this.posChange = posChange;
+        this.paddleSize = paddleSize;
+        this.padSize = this.paddleSize.x / 2 + this.paddleSize.y / 2;
+        this.keys = keys;
+        this.paddle = new THREE.Mesh(
+            new THREE.CapsuleGeometry(this.paddleSize.y, this.paddleSize.x, 15, 25),
+            new THREE.MeshBasicMaterial({ color: color })
+        );
+        this.paddle.position.set(this.pos.x, this.pos.y, this.pos.z);
+        this.paddle.rotation.x = 0.5 * Math.PI;
+        this.paddle.rotation.z = 0.5 * Math.PI;
         
+        this.keyStates = {};
+        window.addEventListener('keydown', (event) => {
+            this.keyStates[event.key] = true;
+        });
+        window.addEventListener('keyup', (event) => {
+            this.keyStates[event.key] = false;
+        });
     }
-    resize(width, height)
-    {
-        this.canvas.width = Math.floor(width);
-        this.canvas.height = Math.floor(height);
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-        this.paddle1 = new player1(this, vec2(5, this.height / 2 - 100), 20, vec2(50, 200));
-        this.paddle2 = new Ai(this, vec2(this.width - 50 - 5, this.height / 2 - 100), 20, vec2(50, 200));
+    
+    update() {
+        if ((this.keyStates[this.keys.left[0]] || this.keyStates[this.keys.left[1]] ) && this.pos.x - this.padSize - this.posChange > -2.5) {
+            this.pos.x -= this.posChange;
+        }
+        if ((this.keyStates[this.keys.right[0]] || this.keyStates[this.keys.right[1]] )&& this.pos.x + this.padSize  + this.posChange < 2.5) {
+            this.pos.x += this.posChange;
+        }
+        this.top = this.pos.x + this.padSize
+        this.bottom = this.pos.x - this.padSize;
+        this.right = this.pos.z + this.paddleSize.y;
+        this.left = this.pos.z - this.paddleSize.y;
+        this.paddle.position.set(this.pos.x, this.pos.y, this.pos.z);
     }
-    render()
-    {
-        this.ctx.fillStyle = 'BLACK';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.paddle1.draw();
-        this.paddle2.draw();
-        this.ball.draw();
+}
+
+class Game {
+    constructor() {
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(this.renderer.domElement);
+
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+
+        this.controler = new OrbitControls(this.camera, this.renderer.domElement);
+        this.gridHelper = new THREE.GridHelper(5);
+        this.axeHelper = new THREE.AxesHelper(5);
+
+        this.planet = new THREE.Mesh(
+            new THREE.PlaneGeometry(5, 10),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+        );
+        this.planet.rotation.x = 0.5 * Math.PI;
+
+        this.wall = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.5, 10),
+            new THREE.MeshBasicMaterial({ color: 0xff0000 })
+        );
+        this.wall.position.set(-2.75, 0.25, 0);
+
+        this.wall2 = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.5, 10),
+            new THREE.MeshBasicMaterial({ color: 0xff0000 })
+        );
+        this.wall2.position.set(2.75, 0.25, 0);
+
+        this.padd1 = new Pad(vec3(0, 0.25 / 2, 4.75 + 0.25/2), 0.1, vec2(0.7, 0.25 / 2), 0x0000ff, {
+            left: ['A','a'],
+            right: ['D','d'],
+        });
+
+        this.padd2 = new Pad(vec3(0, 0.25 / 2, -4.75 - 0.25 /2), 0.1, vec2(0.7, 0.25 / 2), 0x00ff00, {
+            left: ['ArrowLeft'],
+            right: ['ArrowRight'],
+        });
+        this.ball = new Ball(this, vec3(0,0.25 / 2,0), 0.07, 0.25 / 2);
+        this.camera.position.set(1, 3, 5);
+        this.controler.update();
+
+        this.scene.add(
+            this.gridHelper,
+            this.axeHelper,
+            this.planet,
+            this.wall,
+            this.wall2,
+            this.padd1.paddle,
+            this.padd2.paddle,
+            this.ball.ball
+        );
+
+        window.addEventListener('resize', () => {
+            this.resize(window.innerWidth, window.innerHeight);
+        });
     }
-    update()
-    {
-        this.paddle1.update(this.ball);
-        this.paddle2.update(this.ball);
-        this.ball.collisionHandle(this.paddle1);
-        this.ball.collisionHandle(this.paddle2);
+
+    resize(width, height) {
+        this.renderer.setSize(width, height);
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+    }
+
+    render() {
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    update() {
+        this.padd1.update();
+        this.padd2.update();
+        this.ball.collisionHandle(this.padd1);
+        this.ball.collisionHandle(this.padd2);
         this.ball.update();
     }
 }
 
-window.addEventListener('load', function()
-{
-    const canvas = document.getElementById('canvas');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const ctx = canvas.getContext('2d');
-    const game = new Game(canvas, ctx);
-    function animate(){
-        game.render();
+window.addEventListener('load', function () {
+    const game = new Game();
+
+    function animation() {
         game.update();
-        requestAnimationFrame(animate);
+        game.render();
+        requestAnimationFrame(animation);
     }
-    animate();
+
+    animation();
 });

@@ -9,7 +9,7 @@ RUN openssl req -x509 -nodes -days 365 \
     -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/"
 
 
-COPY ./nginx/conf/default /etc/nginx/sites-available
+COPY ./nginx/conf/default.conf /etc/nginx/conf.d/default.conf
 
 COPY ./game/front /usr/share/nginx/html
 

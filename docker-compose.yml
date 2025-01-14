@@ -3,27 +3,29 @@ services:
     build: ./game
     image: game
     container_name: game
+    ports:
+      - "5173:5173"
     networks:
       - transcendence
     volumes:
       - ./game:/usr/src/app
     init: true
 
-  nginx:
-    build: 
-          context: .
-          dockerfile: ./nginx/Dockerfile
-    image: nginx
-    container_name: nginx
-    networks:
-      - transcendence
-    ports:
-      - "3000:80"
-    init: true
-    depends_on:
-      - game
-    volumes:
-      - ./game/front:/usr/share/nginx/html
+  # nginx:
+  #   build: 
+  #         context: .
+  #         dockerfile: ./nginx/Dockerfile
+  #   image: nginx
+  #   container_name: nginx
+  #   networks:
+  #     - transcendence
+  #   ports:
+  #     - "5173:80"
+  #   init: true
+  #   depends_on:
+  #     - game
+  #   volumes:
+  #     - ./game/front:/usr/share/nginx/html
 
 networks:
   transcendence:

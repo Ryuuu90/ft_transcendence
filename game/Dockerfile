@@ -1,10 +1,12 @@
-FROM node:16
+FROM node:18
 
+WORKDIR /usr/src/app/front/
 
-WORKDIR /usr/src/app
+COPY ./package.json .
+COPY package-lock.json .
 
-COPY ./front/. .
+RUN npm install
+RUN npm install --save three
+RUN npm install --save-dev vite
 
-RUN npm install -g live-server 
-
-CMD ["live-server", "--host=0.0.0.0", "--port=3000"]
+CMD ["npx", "vite", "--host"]
