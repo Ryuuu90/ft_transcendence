@@ -1,32 +1,33 @@
 services:
-  game:
-    build: ./game
-    image: game
-    container_name: game
+  front:
+    build: ./game/front
+    image: front
+    container_name: front
     ports:
       - "5173:5173"
     networks:
       - transcendence
     volumes:
-      - ./game:/usr/src/app
+      - ./game/front:/usr/src/app
     init: true
-
-  # nginx:
-  #   build: 
-  #         context: .
-  #         dockerfile: ./nginx/Dockerfile
-  #   image: nginx
-  #   container_name: nginx
-  #   networks:
-  #     - transcendence
+    restart: on-failure
+  backend:
+    build: ./game/backend
+    image: backend
+    container_name: backend
+    ports:
+      - "8000:8000"
+    networks:
+      - transcendence
+    volumes:
+      - ./game/backend:/usr/src/app
+    init: true
+    restart: on-failure
+  # redis:
+  #   image: redis
+  #   container_name: redis
   #   ports:
-  #     - "5173:80"
-  #   init: true
-  #   depends_on:
-  #     - game
-  #   volumes:
-  #     - ./game/front:/usr/share/nginx/html
-
+  #     -
 networks:
   transcendence:
     name: transcendence

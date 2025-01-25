@@ -5,7 +5,9 @@ up :
 
 down:
 	@docker compose down -v
-	@docker rmi game
+	@docker rmi front
+
+re: down up
 
 stop : 
 		@docker-compose stop

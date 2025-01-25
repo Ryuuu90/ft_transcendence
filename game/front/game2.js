@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const API_URL = 'http://localhost:8000/game';
+
+var url = `ws://localhost:8000/ws/player/`
+
 
 function vec2(x, y) {
     return { x: x, y: y };
@@ -11,13 +17,13 @@ function vec3(x, y, z) {
 
 function collision(player, ball)
 {
-    // console.log(player.top < ball.bottom + ball.posChange.x );
-    return ( player.top >= ball.bottom && // Player's top is above ball's bottom
-        player.bottom <= ball.top && // Player's bottom is below ball's top
-        player.right >= ball.left && // Player's right is beyond ball's left
+    return ( player.top >= ball.bottom && 
+        player.bottom <= ball.top && 
+        player.right >= ball.left && 
         player.left <= ball.right );
-}
-
+    }
+    
+    
 class Ball{
     constructor(game, pos, posChange, redius)
     {
@@ -51,15 +57,17 @@ class Ball{
         this.pos.z += this.posChange.z;
         this.pos.x += this.posChange.x;
         this.top = this.pos.x + this.redius;
-        this.bottom = this.pos.x - this.redius;
-        this.left = this.pos.z - this.redius;
-        this.right = this.pos.z + this.redius;
-        this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
+    this.bottom = this.pos.x - this.redius;
+    this.left = this.pos.z - this.redius;
+    this.right = this.pos.z + this.redius;
+    this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
     }
     collisionHandle(player)
     {
         if(collision(player, this))
         {
+            
+            
             let hitPoint = (this.pos.x - player.pos.x) / player.padSize;
             let angleMove = hitPoint * Math.PI / 4;
             if(this.pos.z < 0)
@@ -74,9 +82,31 @@ class Ball{
         }
     }
 }
-
+        
+    //     async function fetchData(playerData) {
+    //         try {
+    //     const response = await fetch(`${API_URL}/startGame/`, {
+    //         method: 'POST',
+    //         headers: {'Content-Type': 'application/json'},
+    //         body: JSON.stringify(playerData)
+    //     });
+        
+    //     const data = await response.json();  // Get the JSON response
+    //     return data;  // Return the data to the calling function
+    // } catch (error) {
+    //     console.error('Error fetching data:', error);
+    // }
+// }
 class Pad {
-    constructor(pos, posChange, paddleSize, color, keys) {
+    constructor(name ,pos, posChange, paddleSize, color, keys) {
+        this.socket = new WebSocket(url)
+
+        this.socket.onopen = function() {
+        console.log("WebSocket connection established");
+
+        // Sending player data once the connection is open
+        };
+        this.name = name
         this.pos = pos;
         this.posChange = posChange;
         this.paddleSize = paddleSize;
@@ -90,22 +120,48 @@ class Pad {
         this.paddle.rotation.x = 0.5 * Math.PI;
         this.paddle.rotation.z = 0.5 * Math.PI;
         
-        this.keyStates = {};
+        this.keyStates = {}
         window.addEventListener('keydown', (event) => {
             this.keyStates[event.key] = true;
         });
         window.addEventListener('keyup', (event) => {
             this.keyStates[event.key] = false;
         });
+        this.playerData = {
+            name : this.name,
+            x : this.pos.x,
+            y : this.pos.y,
+            z : this.pos.z,
+            speed : this.posChange,
+            downKey : this.keyStates[this.keys.left[0]] || this.keyStates[this.keys.left[1]],
+            upKey : this.keyStates[this.keys.right[0]] || this.keyStates[this.keys.right[1]]
+        };
+        // socket.onopen = function() {
+        //     console.log("WebSocket connection established")
+            
+        //     // Now it's safe to send data
+        //     socket.send(JSON.stringify(this.playerData))  // Send player data after connection is open
+        // };
+        // fetchData(this.playerData);
     }
     
     update() {
-        if ((this.keyStates[this.keys.left[0]] || this.keyStates[this.keys.left[1]] ) && this.pos.x - this.padSize - this.posChange > -2.5) {
-            this.pos.x -= this.posChange;
+        if (this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({name : this.name,
+                x : this.pos.x,
+                y : this.pos.y,
+                z : this.pos.z,
+                speed : this.posChange,
+                downKey : (this.keyStates[this.keys.left[0]] || this.keyStates[this.keys.left[1]]) && this.pos.x - this.padSize - this.posChange > -2.5 ,
+                upKey : (this.keyStates[this.keys.right[0]] || this.keyStates[this.keys.right[1]]) && this.pos.x + this.padSize  + this.posChange < 2.5,
+                padSize : this.padSize
+            }));
         }
-        if ((this.keyStates[this.keys.right[0]] || this.keyStates[this.keys.right[1]] )&& this.pos.x + this.padSize  + this.posChange < 2.5) {
-            this.pos.x += this.posChange;
-        }
+        this.socket.onmessage = (e) => {
+            let data = JSON.parse(e.data);
+            if(data.player_data.x)
+                this.pos.x = data.player_data.x;
+        };
         this.top = this.pos.x + this.padSize
         this.bottom = this.pos.x - this.padSize;
         this.right = this.pos.z + this.paddleSize.y;
@@ -151,12 +207,12 @@ class Game {
         );
         this.wall2.position.set(2.75, 0.25, 0);
 
-        this.padd1 = new Pad(vec3(0, 0.25 / 2, 4.75 + 0.25/2), 0.1, vec2(0.7, 0.25 / 2), 0x0000ff, {
+        this.padd1 = new Pad("player1", vec3(0, 0.25 / 2, 4.75 + 0.25/2), 0.1, vec2(0.7, 0.25 / 2), 0x0000ff, {
             left: ['A','a'],
             right: ['D','d'],
         });
 
-        this.padd2 = new Pad(vec3(0, 0.25 / 2, -4.75 - 0.25 /2), 0.1, vec2(0.7, 0.25 / 2), 0x00ff00, {
+        this.padd2 = new Pad("player2", vec3(0, 0.25 / 2, -4.75 - 0.25 /2), 0.1, vec2(0.7, 0.25 / 2), 0x00ff00, {
             left: ['ArrowLeft'],
             right: ['ArrowRight'],
         });
