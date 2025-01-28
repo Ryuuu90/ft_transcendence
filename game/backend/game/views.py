@@ -34,7 +34,7 @@ def index(request):
 @api_view(['GET', 'POST'])
 def startGame(request):
     if request.method == 'GET':
-        player = Player.objects.all()
+        # player = {}
         serializer = PlayerSerializer(player, many=True)
         return JsonResponse(serializer.data, safe=False)
     # if request.method == 'PUT':

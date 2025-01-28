@@ -4,7 +4,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const API_URL = 'http://localhost:8000/game';
 
-var url = `ws://localhost:8000/ws/player/`
+var url_player = `ws://localhost:8000/ws/player/`
+var url_ball = `ws://localhost:8000/ws/ball/`
+
 
 
 function vec2(x, y) {
@@ -14,19 +16,16 @@ function vec2(x, y) {
 function vec3(x, y, z) {
     return { x: x, y: y, z: z };
 }
-
-function collision(player, ball)
-{
-    return ( player.top >= ball.bottom && 
-        player.bottom <= ball.top && 
-        player.right >= ball.left && 
-        player.left <= ball.right );
-    }
-    
     
 class Ball{
     constructor(game, pos, posChange, redius)
     {
+        this.socket = new WebSocket(url_ball)
+
+        this.socket.onopen = function() 
+        {
+            console.log("BallSocket connection established");
+        };
         this.game = game
         this.pos = pos;
         this.speed2 = posChange;
@@ -35,6 +34,21 @@ class Ball{
         this.redius = redius;
         this.ball = new THREE.Mesh(new THREE.SphereGeometry(this.redius), new THREE.MeshBasicMaterial({color: 0xae0f22}));
         this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
+        this.socket.onmessage = (e) => {
+            let data = JSON.parse(e.data);
+            if(data.type == 'update')
+            {
+                this.pos.x = data.ball_data.x;
+                this.posChange.x = data.ball_data.posChangeX;
+                this.pos.z = data.ball_data.z;
+            }
+            if(data.type == 'collision')
+            {
+                this.posChange.x = data.ball_data.posChangeX
+                this.posChange.z = data.ball_data.posChangeZ
+                this.speed = data.ball_data.speed
+            }
+        }
     }
     restart()
     {
@@ -46,40 +60,20 @@ class Ball{
     }
     update()
     {
-        if(this.pos.z - this.redius <= -5)
-            this.restart();
-        if(this.pos.z + this.redius >= 5)
-            this.restart();
-        if(this.pos.x + this.redius >= 2.5)
-            this.posChange.x *= -1;
-        if(this.pos.x - this.redius <= -2.5)
-            this.posChange.x *= -1;
-        this.pos.z += this.posChange.z;
-        this.pos.x += this.posChange.x;
-        this.top = this.pos.x + this.redius;
-    this.bottom = this.pos.x - this.redius;
-    this.left = this.pos.z - this.redius;
-    this.right = this.pos.z + this.redius;
-    this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
-    }
-    collisionHandle(player)
-    {
-        if(collision(player, this))
+        if(this.socket.readyState === WebSocket.OPEN )
         {
-            
-            
-            let hitPoint = (this.pos.x - player.pos.x) / player.padSize;
-            let angleMove = hitPoint * Math.PI / 4;
-            if(this.pos.z < 0)
-                this.posChange.z = this.speed * Math.cos(angleMove);
-            else if(this.pos.z > 0)
-                this.posChange.z = -this.speed * Math.cos(angleMove);
-            this.posChange.x = this.speed * Math.sin(angleMove);
-            if(this.speed < 90)
-            {
-                this.speed += 0.01;
-            }
+            this.socket.send(JSON.stringify({
+                x : this.pos.x,
+                y : this.pos.y,
+                z : this.pos.z,
+                speed : this.speed,
+                speed2 : this.speed2,
+                posChangeX : this.posChange.x,
+                posChangeZ : this.posChange.z,
+                redius : this.redius
+            }))
         }
+        this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
     }
 }
         
@@ -99,18 +93,16 @@ class Ball{
 // }
 class Pad {
     constructor(name ,pos, posChange, paddleSize, color, keys) {
-        this.socket = new WebSocket(url)
+        this.socket = new WebSocket(url_player)
 
         this.socket.onopen = function() {
         console.log("WebSocket connection established");
-
-        // Sending player data once the connection is open
         };
         this.name = name
         this.pos = pos;
         this.posChange = posChange;
         this.paddleSize = paddleSize;
-        this.padSize = this.paddleSize.x / 2 + this.paddleSize.y / 2;
+        this.padSize = this.paddleSize.x / 2 + this.paddleSize.y / 2 ;
         this.keys = keys;
         this.paddle = new THREE.Mesh(
             new THREE.CapsuleGeometry(this.paddleSize.y, this.paddleSize.x, 15, 25),
@@ -127,45 +119,27 @@ class Pad {
         window.addEventListener('keyup', (event) => {
             this.keyStates[event.key] = false;
         });
-        this.playerData = {
-            name : this.name,
-            x : this.pos.x,
-            y : this.pos.y,
-            z : this.pos.z,
-            speed : this.posChange,
-            downKey : this.keyStates[this.keys.left[0]] || this.keyStates[this.keys.left[1]],
-            upKey : this.keyStates[this.keys.right[0]] || this.keyStates[this.keys.right[1]]
+        this.socket.onmessage = (e) => {
+            let data = JSON.parse(e.data);
+            if(data.player_data.x)
+                this.pos.x = data.player_data.x;
         };
-        // socket.onopen = function() {
-        //     console.log("WebSocket connection established")
-            
-        //     // Now it's safe to send data
-        //     socket.send(JSON.stringify(this.playerData))  // Send player data after connection is open
-        // };
-        // fetchData(this.playerData);
     }
     
     update() {
+
         if (this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({name : this.name,
                 x : this.pos.x,
                 y : this.pos.y,
                 z : this.pos.z,
                 speed : this.posChange,
-                downKey : (this.keyStates[this.keys.left[0]] || this.keyStates[this.keys.left[1]]) && this.pos.x - this.padSize - this.posChange > -2.5 ,
-                upKey : (this.keyStates[this.keys.right[0]] || this.keyStates[this.keys.right[1]]) && this.pos.x + this.padSize  + this.posChange < 2.5,
-                padSize : this.padSize
+                downKey : (this.keyStates[this.keys.left[0]] || this.keyStates[this.keys.left[1]]) ,
+                upKey : (this.keyStates[this.keys.right[0]] || this.keyStates[this.keys.right[1]]),
+                padSize : this.padSize,
+                padSizeY : this.paddleSize.y
             }));
         }
-        this.socket.onmessage = (e) => {
-            let data = JSON.parse(e.data);
-            if(data.player_data.x)
-                this.pos.x = data.player_data.x;
-        };
-        this.top = this.pos.x + this.padSize
-        this.bottom = this.pos.x - this.padSize;
-        this.right = this.pos.z + this.paddleSize.y;
-        this.left = this.pos.z - this.paddleSize.y;
         this.paddle.position.set(this.pos.x, this.pos.y, this.pos.z);
     }
 }
@@ -234,6 +208,7 @@ class Game {
         window.addEventListener('resize', () => {
             this.resize(window.innerWidth, window.innerHeight);
         });
+       
     }
 
     resize(width, height) {
@@ -249,15 +224,13 @@ class Game {
     update() {
         this.padd1.update();
         this.padd2.update();
-        this.ball.collisionHandle(this.padd1);
-        this.ball.collisionHandle(this.padd2);
         this.ball.update();
     }
 }
 
 window.addEventListener('load', function () {
     const game = new Game();
-
+    
     function animation() {
         game.update();
         game.render();
