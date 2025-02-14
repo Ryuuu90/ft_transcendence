@@ -29,6 +29,8 @@ ALLOWED_HOSTS = [
      "*",
 ]
 
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Application definition
@@ -51,8 +53,12 @@ ASGI_APPLICATION = 'game_backend.asgi.application'
 
 
 CORS_ALLOW_HEADERS = [
-    'content-type',
+    '*',
 ]
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1",
+]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -62,7 +68,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-     'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    "django.middleware.common.CommonMiddleware",
 ]
 
 CHANNEL_LAYERS = {
@@ -143,3 +150,10 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "sec-websocket-protocol",
+    "authorization",
+]

@@ -9,6 +9,7 @@ services:
       - transcendence
     volumes:
       - ./game/front:/usr/src/app
+      - /usr/src/app/node_modules  # Persist node_modules inside the container
     init: true
     restart: on-failure
   backend:

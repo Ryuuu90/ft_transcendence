@@ -35,6 +35,7 @@ class Ball{
         this.ball = new THREE.Mesh(new THREE.SphereGeometry(this.redius), new THREE.MeshBasicMaterial({color: 0xae0f22}));
         this.ball.position.set(this.pos.x, this.pos.y, this.pos.z);
         this.socket.onmessage = (e) => {
+            // console.log('hi');
             let data = JSON.parse(e.data);
             if(data.type == 'update')
             {
@@ -48,6 +49,15 @@ class Ball{
                 this.posChange.z = data.ball_data.posChangeZ
                 this.speed = data.ball_data.speed
             }
+            if(data.type == 'restart')
+            {
+                this.posChange.x = data.ball_data.x;
+                this.posChange.z = data.ball_data.z;
+                this.posChange.x = data.ball_data.posChangeX;
+                this.posChange.z = data.ball_data.posChangeZ;
+                this.speed = data.ball_data.speed;
+                
+            }
         }
     }
     restart()
@@ -60,6 +70,8 @@ class Ball{
     }
     update()
     {
+        // console.log(this.socket.readyState === WebSocket.OPEN)
+
         if(this.socket.readyState === WebSocket.OPEN )
         {
             this.socket.send(JSON.stringify({
@@ -77,22 +89,23 @@ class Ball{
     }
 }
         
-    //     async function fetchData(playerData) {
-    //         try {
-    //     const response = await fetch(`${API_URL}/startGame/`, {
-    //         method: 'POST',
-    //         headers: {'Content-Type': 'application/json'},
-    //         body: JSON.stringify(playerData)
-    //     });
+async function fetchData() {
+    try {
+        const response = await fetch(`${API_URL}/startGame/`, {
+            method: 'GET',
+            // headers: {'Content-Type': 'application/json'},
+            // body: JSON.stringify(playerData)
+        });
         
-    //     const data = await response.json();  // Get the JSON response
-    //     return data;  // Return the data to the calling function
-    // } catch (error) {
-    //     console.error('Error fetching data:', error);
-    // }
-// }
+        const data = await response.json();  // Get the JSON response
+        return data;  // Return the data to the calling function
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    }
+}
 class Pad {
     constructor(name ,pos, posChange, paddleSize, color, keys) {
+        console.log(keys)
         this.socket = new WebSocket(url_player)
 
         this.socket.onopen = function() {
@@ -121,14 +134,20 @@ class Pad {
         });
         this.socket.onmessage = (e) => {
             let data = JSON.parse(e.data);
-            if(data.player_data.x)
-                this.pos.x = data.player_data.x;
+            if(this.name == 'player1')
+                var player = Object.values(data.players).find(p => p.name === "player1");
+            else if(this.name == 'player2')
+                var player = Object.values(data.players).find(p => p.name === "player2");
+            // console.log(player);
+            if(player.x)
+                this.pos.x = player.x;
         };
     }
     
     update() {
-
+        // console.log(this.socket.readyState === WebSocket.OPEN)
         if (this.socket.readyState === WebSocket.OPEN) {
+            // console.log();
             this.socket.send(JSON.stringify({name : this.name,
                 x : this.pos.x,
                 y : this.pos.y,
@@ -143,9 +162,30 @@ class Pad {
         this.paddle.position.set(this.pos.x, this.pos.y, this.pos.z);
     }
 }
+// var isOnline = 0;
 
 class Game {
-    constructor() {
+    constructor(mode) {
+        this.ready = false;
+        this.init().then( gameData => {this.gameData = gameData
+            this.players = gameData.players;
+            this.ballData = gameData.ball;
+            if( mode == 'local')
+            {
+                this.startLocalGame();
+                this.ready = true;
+            }
+            if(mode == 'online')
+            {
+                this.startOnlineGame();
+                this.ready = true;
+            }
+        });
+    }
+    startLocalGame(){
+        // console.log(this.isOnline)
+        // console.log(this.players)
+        // console.log(this.ballData)
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -181,16 +221,13 @@ class Game {
         );
         this.wall2.position.set(2.75, 0.25, 0);
 
-        this.padd1 = new Pad("player1", vec3(0, 0.25 / 2, 4.75 + 0.25/2), 0.1, vec2(0.7, 0.25 / 2), 0x0000ff, {
-            left: ['A','a'],
-            right: ['D','d'],
-        });
+        this.padd1 = new Pad(this.players.player1.name, vec3(this.players.player1.x, this.players.player1.y, this.players.player1.z), 0.1, vec2(this.players.player1.paddleSizeX, this.players.player1.paddleSizeY), 0x0000ff, this.players.player1.keys);
 
-        this.padd2 = new Pad("player2", vec3(0, 0.25 / 2, -4.75 - 0.25 /2), 0.1, vec2(0.7, 0.25 / 2), 0x00ff00, {
+        this.padd2 = new Pad(this.players.player2.name, vec3(this.players.player2.x, this.players.player2.y, this.players.player2.z), 0.1, vec2(this.players.player2.paddleSizeX, this.players.player2.paddleSizeY), 0x00ff00, {
             left: ['ArrowLeft'],
             right: ['ArrowRight'],
         });
-        this.ball = new Ball(this, vec3(0,0.25 / 2,0), 0.07, 0.25 / 2);
+        this.ball = new Ball(this, vec3(this.ballData.x,this.ballData.y,this.ballData.z), this.ballData.posChange, this.ballData.redius);
         this.camera.position.set(1, 3, 5);
         this.controler.update();
 
@@ -210,18 +247,24 @@ class Game {
         });
        
     }
-
+    // startOnlineGame(){}
     resize(width, height) {
         this.renderer.setSize(width, height);
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
     }
-
+    async init() {
+        console.log("Fetching ball data...");
+        const gameData = await fetchData();
+        return gameData
+    }
     render() {
+        if (!this.ready) return;
         this.renderer.render(this.scene, this.camera);
     }
 
     update() {
+        if (!this.ready) return;
         this.padd1.update();
         this.padd2.update();
         this.ball.update();
@@ -229,13 +272,34 @@ class Game {
 }
 
 window.addEventListener('load', function () {
-    const game = new Game();
-    
-    function animation() {
-        game.update();
-        game.render();
-        requestAnimationFrame(animation);
+    // const game = new Game();
+    const localButton = document.createElement("button");
+    localButton.textContent = "Play Local";
+    localButton.onclick = () => {
+        document.body.removeChild(localButton);
+        document.body.removeChild(onlineButton);
+        const game = new Game('local');
+        function animation() {
+            game.update();
+            game.render();
+            requestAnimationFrame(animation);
+        }
+        animation();
     }
 
-    animation();
+    const onlineButton = document.createElement("button");
+    onlineButton.textContent = "Play Online";
+    onlineButton.onclick = () => {
+        document.body.removeChild(localButton);
+        document.body.removeChild(onlineButton);
+        const game = new Game('online');
+        function animation() {
+            game.update();
+            game.render();
+            requestAnimationFrame(animation);
+        }
+        animation();
+    }
+    document.body.appendChild(localButton);
+    document.body.appendChild(onlineButton);
 });
