@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from game.models import *
+import uuid
 from game.serializers import *
 import json
 
@@ -21,7 +22,7 @@ import json
 def startGame(request):
     if request.method == 'GET':
         game = {
-            'players' : {'player1': {'name' : 'player1', 'x' : '0', 'y' : '0.125', 'z' : '4.875', 'paddleSizeX' : '0.7', 'paddleSizeY' : '0.125', 'keys' : {'left' : {'A', 'a'}, 'right' : {'D', 'd'} } }, 'player2' :{'name' : 'player2', 'x' : '0', 'y' : '0.125', 'z' : '-4.875', 'paddleSizeX' : '0.7', 'paddleSizeY' : '0.125', 'keys' : {'left' : {'ArrowLeft'}, 'right' : {'ArrowRight'} } }},
+            'players' : {'player1': {'name' : str(uuid.uuid4()), 'x' : '0', 'y' : '0.125', 'z' : '4.875', 'paddleSizeX' : '0.7', 'paddleSizeY' : '0.125', 'keys' : {'left' : {'A', 'a'}, 'right' : {'D', 'd'} } }, 'player2' :{'name' : 'player2', 'x' : '0', 'y' : '0.125', 'z' : '-4.875', 'paddleSizeX' : '0.7', 'paddleSizeY' : '0.125', 'keys' : {'left' : {'ArrowLeft'}, 'right' : {'ArrowRight'} } }},
             'ball' : {'x' : '0', 'y' : '0.125', 'z' : '0', 'posChange' : '0.07', 'redius' : '0.125'}
         }
         return Response(game , status=status.HTTP_201_CREATED)
